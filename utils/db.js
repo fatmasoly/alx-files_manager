@@ -1,4 +1,4 @@
-import mongodb, { ObjectID } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 
 class DBClient {
   constructor() {
@@ -6,19 +6,25 @@ class DBClient {
     const port = process.env.DB_PORT || '27017';
     const database = process.env.DB_DATABASE || 'files_manager';
     const url = `mongodb://${host}:${port}`;
-    this.client = new mongodb.MongoClient(url, { useUnifiedTopology: true });
-    this.client.connect((err) => {
-      if (err) {
-        console.error(err);
-        process.exit(1);
-      }
+    this.client = new MongoClient(url, { useUnifiedTopology: true });
+    this.db = null;
+
+    this.connect(database);
+  }
+
+  async connect(database) {
+    try {
+      await this.client.connect();
       this.db = this.client.db(database);
       console.log('Connected to database');
-    });
+    } catch (err) {
+      console.error('Failed to connect to the database', err);
+      process.exit(1);
+    }
   }
 
   isAlive() {
-    return this.client.isConnected();
+    return this.client && this.client.isConnected() && this.db !== null;
   }
 
   async nbUsers() {
@@ -63,12 +69,12 @@ class DBClient {
 
   async readFile(fileId) {
     const files = this.db.collection('files');
-    return files.findOne({ _id: ObjectID(fileId) });
+    return files.findOne({ _id: new ObjectId(fileId) });
   }
 
   async deleteFile(fileId) {
     const files = this.db.collection('files');
-    return files.deleteOne({ _id: ObjectID(fileId) });
+    return files.deleteOne({ _id: new ObjectId(fileId) });
   }
 
   async saveFile(file) {

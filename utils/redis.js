@@ -7,6 +7,10 @@ class RedisClient {
     this.client.on('error', (error) => {
       console.log(`Redis client not connected to the server: ${error.message}`);
     });
+
+    this.getAsync = promisify(this.client.get).bind(this.client);
+    this.setAsync = promisify(this.client.set).bind(this.client);
+    this.delAsync = promisify(this.client.del).bind(this.client);
   }
 
   isAlive() {
@@ -14,18 +18,28 @@ class RedisClient {
   }
 
   async get(key) {
-    const getAsync = promisify(this.client.get).bind(this.client);
-    const value = await getAsync(key);
-    return value;
+    try {
+      return await this.getAsync(key);
+    } catch (error) {
+      console.error(`Failed to get key ${key}: ${error.message}`);
+      return null;
+    }
   }
 
   async set(key, value, duration) {
-    this.client.set(key, value);
-    this.client.expire(key, duration);
+    try {
+      await this.setAsync(key, value, 'EX', duration);
+    } catch (error) {
+      console.error(`Failed to set key ${key}: ${error.message}`);
+    }
   }
 
   async del(key) {
-    this.client.del(key);
+    try {
+      await this.delAsync(key);
+    } catch (error) {
+      console.error(`Failed to delete key ${key}: ${error.message}`);
+    }
   }
 }
 

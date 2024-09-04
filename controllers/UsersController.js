@@ -1,35 +1,26 @@
-import dbClient from '../utils/dbClient';
-import crypto from 'crypto';
+const redisClient = require('../utils/redis');
+const dbClient = require('../utils/db');
 
-class UsersController {
-  static async postNew(req, res) {
-    const { email, password } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ error: 'Missing email' });
+class AppController {
+  static async getStatus(req, res) {
+    try {
+      const redisAlive = await redisClient.isAlive();
+      const dbAlive = await dbClient.isAlive();
+      return res.status(200).json({ redis: redisAlive, db: dbAlive });
+    } catch (error) {
+      return res.status(500).json({ error: 'Internal Server Error' });
     }
-    if (!password) {
-      return res.status(400).json({ error: 'Missing password' });
+  }
+
+  static async getStats(req, res) {
+    try {
+      const usersCount = await dbClient.nbUsers();
+      const filesCount = await dbClient.nbFiles();
+      return res.status(200).json({ users: usersCount, files: filesCount });
+    } catch (error) {
+      return res.status(500).json({ error: 'Internal Server Error' });
     }
-
-    const existingUser = await dbClient.getUserByEmail(email);
-    if (existingUser) {
-      return res.status(400).json({ error: 'Already exist' });
-    }
-
-    const hashedPassword = crypto
-      .createHash('sha1')
-      .update(password)
-      .digest('hex');
-
-    const newUser = {
-      email,
-      password: hashedPassword,
-    };
-    const result = await dbClient.createUser(newUser);
-
-    return res.status(201).json({ id: result.insertedId, email });
   }
 }
 
-export default UsersController;
+module.exports = AppController;
