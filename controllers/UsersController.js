@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import dbClient from '../utils/db';
+import redisClient from '../utils/redis';
 
 class UsersController {
   static async postNew(req, res) {
@@ -30,6 +31,7 @@ class UsersController {
 
     return res.status(201).json({ id: newUser.insertedId, email });
   }
+
   static async getMe(req, res) {
     const token = req.headers['x-token'];
     if (!token) {
